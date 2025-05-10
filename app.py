@@ -26,13 +26,9 @@ def extract_image_url(description):
 def validate_feed_data(data):
     """Valide la structure des données d'entrée"""
     if not isinstance(data, dict):
-        raise ValueError("Les données doivent être un objet")
-    if 'body' not in data:
-        raise ValueError("Les données doivent contenir une section 'body'")
-    if 'data' not in data['body']:
-        raise ValueError("Les données doivent contenir une section 'data' dans 'body'")
-    if 'channel' not in data['body']['data']:
-        raise ValueError("Les données doivent contenir une section 'channel' dans 'data'")
+        raise ValueError("Les données doivent être un objet RSS")
+    if 'channel' not in data:
+        raise ValueError("Les données doivent contenir une section 'channel'")
 
 @app.route('/api/articles', methods=['POST'])
 def process_feeds():
@@ -44,8 +40,7 @@ def process_feeds():
         validate_feed_data(data)
         result = []
 
-        # Accéder aux données via la structure body > data > channel
-        channel = data['body']['data']['channel']
+        channel = data['channel']
         source_name = channel.get('title', 'Unknown Source')
 
         items = channel.get('item', [])
@@ -54,11 +49,15 @@ def process_feeds():
 
         for item in items:
             try:
+                # Gestion des créateurs multiples (dc:creator ou author)
                 author = item.get('dc:creator') or item.get('author') or None
                 description = item.get('description', '')
 
                 # Nettoyage du texte de description
                 clean_description = BeautifulSoup(description, 'html.parser').get_text().strip()
+
+                # Extraction de l'image de la description
+                image_url = extract_image_url(description)
 
                 article = {
                     "source": {
@@ -69,7 +68,7 @@ def process_feeds():
                     "title": item.get('title', '').strip(),
                     "description": clean_description,
                     "url": item.get('link', ''),
-                    "urlToImage": extract_image_url(description),
+                    "urlToImage": image_url,
                     "publishedAt": item.get('pubDate', ''),
                     "content": clean_description
                 }
