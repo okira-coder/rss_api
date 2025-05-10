@@ -26,9 +26,13 @@ def extract_image_url(description):
 def validate_feed_data(data):
     """Valide la structure des données d'entrée"""
     if not isinstance(data, dict):
-        raise ValueError("Les données doivent être un objet RSS")
-    if 'channel' not in data:
-        raise ValueError("Les données doivent contenir une section 'channel'")
+        raise ValueError("Les données doivent être un objet")
+    if 'body' not in data:
+        raise ValueError("Les données doivent contenir une section 'body'")
+    if 'data' not in data['body']:
+        raise ValueError("Les données doivent contenir une section 'data' dans 'body'")
+    if 'channel' not in data['body']['data']:
+        raise ValueError("Les données doivent contenir une section 'channel' dans 'data'")
 
 @app.route('/api/articles', methods=['POST'])
 def process_feeds():
@@ -40,7 +44,8 @@ def process_feeds():
         validate_feed_data(data)
         result = []
 
-        channel = data['channel']
+        # Accéder aux données via la structure body > data > channel
+        channel = data['body']['data']['channel']
         source_name = channel.get('title', 'Unknown Source')
 
         items = channel.get('item', [])
